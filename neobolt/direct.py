@@ -871,15 +871,10 @@ def _handshake(s, resolved_address, der_encoded_server_certificate, **config):
     s.sendall(data)
 
     # Handle the handshake response
-    ready_to_read = False
-    while not ready_to_read:
-        ready_to_read, _, _ = select((s,), (), (), 1)
-
-        timeout = config.get("connection_timeout", DEFAULT_CONNECTION_TIMEOUT)
-        connection_timeout = (perf_counter() - start_timestamp) > timeout
-        if not ready_to_read and connection_timeout:
-            message = "Failed to read any data from server {!r} after connected".format(resolved_address)
-            raise ServiceUnavailable(message)
+    timeout = config.get("connection_timeout", DEFAULT_CONNECTION_TIMEOUT)
+    ready_to_read, _, _ = select((s,), (), (), timeout)
+    if not ready_to_read:
+        raise ServiceUnavailable("Failed to read any data from server {!r} after connected".format(resolved_address))
 
     try:
         data = s.recv(4)
